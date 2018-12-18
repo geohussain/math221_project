@@ -1,0 +1,322 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[12pt]{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%packages
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+ 
+%Import the natbib package and sets a bibliography  and citation styles
+\usepackage{natbib}
+\bibliographystyle{apa}
+\setcitestyle{authoryear}
+\usepackage[usenames,dvipsnames]{xcolor}
+\definecolor{navyblue}{rgb}{0.0, 0.0, 0.7}
+\usepackage[T1]{fontenc}
+\usepackage{eucal}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{xfrac}
+\usepackage{multirow}
+\usepackage{adjustbox}
+\usepackage{units}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{algorithm,algpseudocode}
+\usepackage{hyperref}
+\hypersetup{pdftex,colorlinks=true,allcolors=navyblue}
+\usepackage{hypcap}
+
+\usepackage{times}
+\usepackage{calc}
+
+\usepackage{amsmath,amssymb,graphicx,amsfonts,psfrag,layout,array,longtable,lscape,booktabs,dcolumn,hyperref,multirow}
+\usepackage{tabularx}
+\usepackage[page]{appendix}
+\usepackage{multicol}  
+\usepackage{setspace}
+\usepackage{hyperref, url}
+\usepackage[margin=1in]{geometry} %1 inch margins
+\usepackage{gensymb}
+\usepackage{color}
+\usepackage{alltt}
+\usepackage{courier}
+
+\usepackage{tikz}
+\usetikzlibrary{calc,matrix,trees,shapes,arrows}
+
+%change encoding
+%\usepackage[utf8]{inputenc}
+
+%Spacing
+\usepackage{setspace}
+\onehalfspacing
+
+%code chunk margins
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+
+%macros
+\newcommand{\Adv}{{\mathbf{Adv}}}       
+\newcommand{\prp}{{\mathrm{prp}}}                  
+\newcommand{\calK}{{\cal K}}
+\newcommand{\outputs}{{\Rightarrow}}                
+\newcommand{\getsr}{{\:\stackrel{{\scriptscriptstyle\hspace{0.2em}\$}}{\leftarrow}\:}}
+\newcommand{\andthen}{{\::\;\;}}    %  \: \; for thinspace, medspace, thickspace
+\newcommand{\Rand}[1]{{\mathrm{Rand}[{#1}]}}       % A command with one argument
+\newcommand{\Perm}[1]{{\mathrm{Perm}[{#1}]}}       
+\newcommand{\Randd}[2]{{\mathrm{Rand}[{#1},{#2}]}} % and with two arguments
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\DeclareMathOperator*{\plim}{plim}
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+\newcolumntype{Y}{>{\raggedleft\arraybackslash}X}% raggedleft column X
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+\makeatletter
+\newcommand{\algmargin}{\the\ALG@thistlm}
+\makeatother
+\newlength{\whilewidth}
+\settowidth{\whilewidth}{\algorithmicwhile\ }
+\algdef{SE}[parWHILE]{parWhile}{EndparWhile}[1]
+  {\parbox[t]{\dimexpr\linewidth-\algmargin}{%
+     \hangindent\whilewidth\strut\algorithmicwhile\ #1\ \algorithmicdo\strut}}{\algorithmicend\ \algorithmicwhile}%
+\algnewcommand{\parState}[1]{\State%
+  \parbox[t]{\dimexpr\linewidth-\algmargin}{\strut #1\strut}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\title{Math221 Final Project:\\ Evaluation of Solvers on Frequency-Domain Finite Difference Numerical Modelling of Acoustic Waves }
+\date{\today}
+\author{Hussain AlSalem \vspace{10mm}}
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+Seismic exploration is one of the main geophysical methods to extract quantitative inferences about the Earth's interior at different scales from the recording of seismic wave near the surface. Some of the main Applications include civil engineering for cavity detection, nuclear waste storage and oil and gas exploration. Quantitative inference of the physical properties of the subsurface from the recordings of seismic waves at receiver positions is the so-called seismic inverse problem that can be recast in the framework of local numerical optimization. Full waveform inversion (\citet{virieux2009overview} for review) aims to exploit the full information content of seismic data by minimization of the misfit between the full seismic wave-field and the modeled one. The dominance of compressional (P) wave speed relative to shear wave (S) in marine environments has prompted many authors to develop and apply seismic modeling and inversion under the acoustic approximation, either in time domain or frequency domain.
+
+In frequency-domain, wave modeling reduces to the resolution of a complex-valued large and sparse system of linear equations for each frequency, the solution of which is the monochromatic wave-field and the right hand side (RHS) is the source. Three key issues in frequency domain wave modeling concern the linear algebra technique used to solve the linear system, adding variable topography in the large and sparse system of linear equations and the numerical method used for the discretization of the wave equation. In this study, I will thoroughly investigate the first issue.
+
+\subsection{Linear algebra solver techniques.}
+The linear system can be solved with Gauss elimination techniques based on sparse direct solver \citep{duff1986direct}, Krylov-subspace iterative methods \citep{saad2003iterative} or hybrid direct/iterative method and domain decomposition techniques \citep{smith2004domain}. If the framework of seismic imaging includes a large number of sources (i.e., RHS), one motivation behind the frequency-domain formulation of acoustic wave modeling has been to develop efficient approaches for multi-RHS modeling based on sparse direct solvers. A sparse direct solver first performs an LU decomposition of the matrix which is independent of the source followed by forward and backward substitutions for each source to get the solution \citep{demmel1997applied}. Two drawbacks of the direct-solver approach are the memory requirement of the LU decomposition resulting from the fill-in of the matrix during the LU decomposition and the limited scalability of the LU decomposition on large-scale distributed-memory platforms. In this report, I will compare between two robust solvers: SuperLU direct solver \citep{li2011superlu} and IDR(s) which is an efficient iterative solver short recurrence Krylov subspace method for solving large nonsymmetric systems of linear equations \citep{sonneveld2008idr}. The goal of this report is to show the advantages, drawbacks and limits of these two solvers regarding our forward problem.
+
+\section{Frequency-domain acoustic wave equation}
+Following standard Fourier transformation convention, the 3D acoustic first-order velocity-pressure system can be written in the frequency domain as:
+\begin{equation}\label{eq:wave_eq}
+	\begin{split}
+	-i \omega p (x,y,z,w) = \kappa(x,y,z) \left(\frac{\partial v_x(x,y,z,\omega)}{\partial x} + \frac{\partial v_y(x,y,z,\omega)}{\partial y} + \frac{\partial v_z(x,y,z,\omega)}{\partial z} \right)\\
+	-i \omega v_x(x,y,z,\omega) = b(x,y,z) \cdot \frac{\partial p(x,y,z,\omega)}{x} + f_x(x,y,z,\omega)\\
+	-i \omega v_y(x,y,z,\omega) = b(x,y,z) \cdot \frac{\partial p(x,y,z,\omega)}{y} + f_y(x,y,z,\omega)\\
+	-i \omega v_z(x,y,z,\omega) = b(x,y,z) \cdot \frac{\partial p(x,y,z,\omega)}{z} + f_z(x,y,z,\omega),
+	\end{split}
+\end{equation}
+where $\omega$ is the angular frequency, $\kappa(x,y,z)$ is the bulk modulus, $b(x,y,z)$ is the buoyancy, $p(x,y,z,\omega)$ is the pressure, $v_x(x,y,z,\omega)$, $v_y(x,y,z,\omega)$, $v_z(x,y,z,\omega)$ are the components of the particle velocity vector. $f_x(x,y,z,\omega)$, $f_y(x,y,z,\omega)$, $f_z(x,y,z,\omega)$ are the components of the external forces. The first block of Equation~\ref{eq:wave_eq} is the time derivative of the Hooke's law, while the three last block rows are the equation of motion in the frequency domain.
+
+The first-order system can be recast as a second-order equation in pressure after elimination of the particle velocities in Equation~\ref{eq:wave_eq}, that leads to a generalization of the Helmholtz equation:
+\begin{equation}\label{eq:helm_eq}
+	\frac{\omega^2}{\kappa(\mathbf{x})}p(\mathbf{x},\omega)+\frac{\partial}{\partial x}b(\mathbf{x})\frac{\partial p(\mathbf{x},\omega)}{\partial x} + \frac{\partial}{\partial y}b(\mathbf{x})\frac{\partial p(\mathbf{x},\omega)}{\partial y}+\frac{\partial}{\partial z}b(\mathbf{x})\frac{\partial p(\mathbf{x},\omega)}{\partial z} = s(\mathbf{x},\omega),
+\end{equation}
+where $\mathbf{x}=(x,y,z)$ and $s(\mathbf{x},\omega)= \nabla \cdot \mathbf{f}$ denotes the pressure source. Since the relationship between the wavefields and the source terms is linear in the first-order and second-order wave equations, Equations \ref{eq:wave_eq} and \ref{eq:helm_eq} can be recast in matrix form:
+\begin{equation}\label{eq:matrix_form}
+	\begin{split}
+		[\mathbf{M}+\mathbf{S}]\mathbf{u}=\mathbf{Au}=\mathbf{b},	
+	\end{split}
+\end{equation}
+where $\mathbf{M}$ is the mass matrix, $\mathbf{S}$ is the complex stiffness/damping matrix. The sparse impedance matrix $\mathbf{A}$ has complex-valued coefficients which depend on medium properties and angular frequency. The wavefield (either the scalar pressure wavefield or the pressure-velocity wavefields) is denoted by the vector $\mathbf{u}$ and the source by $\mathbf{b}$ \citep{marfurt1984accuracy}. The dimension of the square matrix $\mathbf{A}$ is the number of pressure nodes in the computational domain. The matrix $\mathbf{A}$ has a symmetric pattern for the 2nd and 4th order finite difference (FD) method discussed in this study but is generally not symmetric because of absorbing boundary conditions along the edges of the computational domain. An example of a 2nd order and 4th order FD discretization of matrix \textbf{A} for a $13 \times 13 \times 9$ domain are shown in Figure~\ref{fig:A_matrices}.
+
+\begin{figure}
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{graphs/A_2nd.png}
+  \caption{2nd order FD}
+  \label{A_2nd}
+\end{subfigure}
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{graphs/A_4th.png}
+  \caption{4th order FD}
+  \label{fig:A_4th}
+\end{subfigure}
+\caption{2nd and 4th order discretized matrices \textbf{A} for a $13 \times 13 \times 9$ that includes boundary conditions.}
+\label{fig:A_matrices}
+\end{figure}
+\section{Algorithms of the solvers}
+\subsection{IDR(s) solver}
+The IDR methods are based on the induced dimension reduction (IDR) method \citep{sonneveld2008idr}. IDR(s) generates residuals that are forced to be in sequence of nested subspaces. Although IDR(s) behaves like an iterative method, in exact arithmetic it computes the true solution using at most $N+N/s$ matrix-vector products, with $N$ the problem size and $s$ the co-dimension of a fixed subspace. From \citet{sonneveld2008idr}, the IDR(s) pseudo-code is shown in Algorithm~\ref{alg:idr}.
+\begin{algorithm}
+  \caption{IDR(s) pseudo-code.}
+  \label{alg:idr}
+  \begin{algorithmic}[1]
+	  \Require $\textbf{A} \in \mathbb{C}^{N \times N}; \mathbf{x}_0, b \in \mathbb{C}^{N \times s}; TOL \in (0,1); MAXIT > 0$
+	  \Ensure $x_n$ such that $||\mathbf{b}-\mathbf{A}x_n|| \leq TOL$\\
+	  \emph{(Initialization)}\\
+	  Calculate $\mathbf{r}_0=\mathbf{b}-\mathbf{Ax}_0$;\\
+	  \emph{(Apply $s$ minimum norm steps, to build enough vectors in $\mathbf{G}_0$)}
+	  \For{$n=0$ \textbf{to} $s-1$}
+	  	\State $v=\mathbf{Ar}_n; \omega=(\mathbf{v}^\mathbf{H}r_n)/(\mathbf{v}^H\mathbf{v});$
+		\State $\Delta \mathbf{x}_n = \omega \mathbf{r}_n; \Delta \mathbf{r}_n = - \omega \mathbf{v}; $
+		\State $\mathbf{r}_{n+1} = \mathbf{r}_n + \Delta \mathbf{r}_n; \mathbf{x}_{n+1}= \mathbf{x}_{n} + \Delta \mathbf{x}_n; $ 
+	  \EndFor
+	  \State $\Delta \mathbf{R}_{n+1}= (\Delta \mathbf{r}_n \cdots \Delta \mathbf{r}_0); \Delta \mathbf{X}_{n+1}= (\Delta \mathbf{x}_n \cdots \Delta \mathbf{x}_0);$\\
+	  \emph{(Building $\mathbf{G}_j$ spaces for $j=1,2,3,\cdots$)}\\
+	  $n=s$\\
+	  \emph{(Loop over $\mathbf{G}_j$ spaces)}
+	  \While {$||\mathbf{r}_n||> TOL$ \textbf{and} $n<MAXIT$}
+	  	\State \emph{(Loop inside $\mathbf{G}_j$ space)}
+		\For{$k=0$ \textbf{to} s}
+		\State Solve $\mathbf{c}$ from $\mathbf{P}^H \Delta \mathbf{R}_n \mathbf{c} = \mathbf{P}^H \mathbf{r}_n$
+		\State $\mathbf{v}=\mathbf{r}_n-\Delta \mathbf{R}_n \mathbf{c};$
+		\If {$k=0$}
+			\State \emph{(Entering $\mathbf{G}_{j+1}$)}
+			\State $\mathbf{t}=\mathbf{Av};$
+			\State $\omega = (\mathbf{t}^H\mathbf{v})/(\mathbf{t}^H\mathbf{t});$
+			\State $\Delta \mathbf{r}_n = - \Delta \mathbf{R}_n \mathbf{c} - \omega \mathbf{t};$
+			\State $\Delta \mathbf{x}_n = - \Delta \mathbf{X}_n \mathbf{c} + \omega \mathbf{v};$
+		\Else
+			\State \emph{(Subsequent vectors in $\mathbf{G}_{j+1}$)}
+			\State $\Delta \mathbf{x}_n = - \Delta \mathbf{X}_n \mathbf{c} + \omega \mathbf{v};$
+			\State $\Delta \mathbf{r}_n = -\mathbf{A} \Delta \mathbf{x}_n ;$
+		\EndIf
+		\State $\mathbf{r}_{n+1} = \mathbf{r}_n + \Delta \mathbf{r}_n;$
+		\State $\mathbf{x}_{n+1} = \mathbf{x}_n + \Delta \mathbf{x}_n;$
+		\State $n=n+1;$
+		\State $\Delta R_n = (\Delta r_{n-1} \cdots \Delta r_{n-s});$
+		\State $\Delta X_n = (\Delta x_{n-1} \cdots \Delta x_{n-s});$
+		\EndFor
+	  \EndWhile
+  \end{algorithmic}
+\end{algorithm}
+	  
+	  
+
+\subsection{SuperLU solver}
+The kernel algorithm in SuperLU is sparse Gaussian elimination \citep{li05}. The high-level algorithm can be summarized as follows:
+\begin{enumerate}
+	\item Compute a \emph{triangular factorization} $P_rD_rAD_cP_c=LU$. Here $D_r$ and $D_c$ are diagonal matrices to equilibrate the system, $P_r$ and $P_c$ are \emph{permutation matrices}. Premultiplying $A$ by $P_r$ reorders the rows of $A$, and post-multiplying $A$ by $P_c$ reorders the columns of $A$. $P_r$ and $P_c$ are chosen to enhance sparsity, numerical stability, and parallelism. $L$ is a unit lower triangular matrix $(L_{ii}=1)$ and $U$ is upper triangular matrix. The factorization can also be applied to non-square matrices.
+	\item Solve $AX=B$ by evaluating $X=A^{-1}B=(D_r^{-1}P_r^{-1}LU P_c^{-1}D_c^{-1})^{-1}B =$ \\ $D_c(P_c(U^{-1}(L^{-1}(P_r(D_rB)))))$. This is done efficiently by multiplying from right to left in the last expression: Scale the rows of $B$ by $D_r B$. Multiplying $L^{-1}(P_rD_rB)$ means solving the right hand sides (nRHS) triangular systems of equations with matrix $L$ by substitution. Similarly, multiplying $U^{-1}(L^{-1}(P_rD_rB))$ means solving triangular systems with $U$.
+\end{enumerate}
+
+The pseudo-code for the right-looking algorithm is given by Algorithm~\ref{alg:SuperLU}. The algorithm is chosen for parallel SuperLU for the following reasons:
+  \begin{enumerate}
+	  \item The sparsity structure can be determined before numerical factorization because of static pivoting.
+	  \item All the GEMM (general matrix multiplication) updates to the trailing submatrix are independent and so can be done in parallel.
+\begin{algorithm}
+  \caption{SuperLU pseudo-code.}
+  \label{alg:SuperLU}
+  \begin{algorithmic}[1]
+    \For{block $K=1$ $\mathbf{to}$ $N$}
+      \State Factorize $A(K:N,K) \rightarrow L(K:N,K)$
+	  (may involve pivoting)
+	  \State Compute $U(K,K+1:N)$
+	  (via a sequence of triangular solves)
+	  \State Update $A(K+1:N,K+1:N) \leftarrow A(K+1:N,K+1:N)-L(K+1:N,K) \cdot U(K,K+1:N)$
+	  (via a sequence of calls to GEMM)
+	  \EndFor
+  \end{algorithmic}
+\end{algorithm}
+	  
+   \end{enumerate}
+\section{Local machine simulations}
+A 2011 iMac machine was used to conduct tests for small matrix sizes to both quality control the code and find the limits of the machine. The iMac has 3.5GHZ quad-core Intel Core i7 with 4MB on-chip shared L3 cache. It also has 16GB of 1333MHz DDR3 memory. All local machine tests were conducted for a second order FD discretization. 
+\subsection{Free surface boundary (FSB) results}
+The first simulation was done for a flat surface with FSB. For this simulation, the square matrix $\mathbf{A}$ dimension and number of unknowns is approximately equal to the cubic of the total number of cells in the x direction. The number of unknowns was increased gradually to find the limits of each solver in the local machine. The tested solvers on the local machine are sequential iterative IDR(s), sequential MATLAB direct solver, sequential SuperLU and parallel SuperLU with four processors. Figure~\ref{fig:local_compare} shows the elapsed times and limits of these solvers. The Sequential Matlab solver could only solve up to approximately $50K$ (40 cells in each direction) unknowns while sequential SuperLU limit was approximately $300K$ unknowns (67 cells in each direction). On the other hand, sequential IDR(s) and 4-core parallel SuperLU limit was approximately $600K$ (85 cells in each direction) unknowns. For large matrices with $200K$ (60 cells in each direction) and more unknowns, the IDR(s) sequential solver is about 5 times faster than 4-core parallel SuperLU and 10 times faster than sequential SuperLU.
+
+% A fast description of the pyfem or FEADES lab sequential algorithms and what needs to be parallelized.
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/local_compare.png}
+  \caption{Comparison of speeds and limits of direct solvers on local machine (iMac 2011) with flat topography.}
+  \label{fig:local_compare}
+\end{figure}
+\subsection{Staircase boundary results}
+The second simulation was done for a staircase surface with FSB. In this case, we have a 10-degree inclined surface at the first third part of the domain. All nodes (unknowns) located above this surface have a pressure value equal to zero. For this simulation, the square matrix $\mathbf{A}$ dimension and number of unknowns is approximately equal to the cubic of the total number of cells in the x direction. In addition, the cells above the surface will have a corresponding value equal to one in the diagonal of the $\mathbf{A}$ matrix and zero in the RHS. The number of unknowns was increased gradually to find the limits of each solver in the local machine. The tested solvers on the local machine were the same as for the flat surface. Figure~\ref{fig:local_compare_stc} shows the elapsed times and limits of these solvers. The Sequential Matlab solver could only solve up to approximately $50K$ (40 cells in each direction) unknowns. On the other hand, sequential IDR(s), sequential SuperLU and 4-core parallel SuperLU limit was approximately $600K$ (85 cells in each direction) unknowns. For large matrices with $200K$ (60 cells in each direction) and more unknowns, the IDR(s) sequential solver is about 3 times faster than 4-core parallel SuperLU and 10 times faster than sequential SuperLU.
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/local_compare_stc.png}
+  \caption{Comparison of speeds and limits of direct solvers on local machine (iMac 2011) with staircase topography.}
+  \label{fig:local_compare_stc}
+\end{figure}
+
+\section{Direct SuperLU vs iterative IDR(s) parallel solvers on Edison}
+In order to test strong and weak scaling, limits, advantages and drawbacks of each solver on real-sized problems, further tests on NERSC were made. The tests were conducted on Edison which is a Cray XC30 super-computer with peak performance of 2.57 petaflops/sec, 133,824 compute cores, 357 terabytes of memory, and 7.56 petabytes of disk. Each core has about 2.67 gigabytes of memory and a speed of 2.4 GHz. Furthermore, each node has two sockets, each socket is populated with a 12-core Intel "Ivy Bridge" processor, 24 cores per node. The simulations in this section were all performed using a 2.67 gigabytes of memory per core and conducted on a Flat topography problem with FSB.
+\subsection{Second-order results}\label{sec:second-order}
+The first simulation was conducted to measure the strong scaling for a medium-sized problem. The problem size $\mathbf{A}$ was kept constant and the number of processors increased gradually from 1 to a 100. The results in Figure~\ref{fig:edison_compare_strong} and Figure~\ref{fig:edison_ratio} show that IDR(s) methods are approximately 10 times faster than parallel SuperLU for mid-sized problems. Thus, SuperLU direct solvers for these problem sizes will be cost-effective when we have more than 10 sources (10 different RHS sides). Furthermore, Figure~\ref{fig:edison_speedup} implies that the SuperLU direct solver scales better than the IDR(s) solver as the number of processors increases.  
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/edison_compare_strong.png}
+  \caption{Strong-scaling comparison on Edison for SuperLU and IDR(s) solvers using 2nd order discretization scheme.}
+  \label{fig:edison_compare_strong}
+\end{figure}
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/edison_ratio.png}
+  \caption{Speed ratio comparison on Edison for IDR(s)$\div$SuperLU solvers using 2nd order discretization scheme.}
+  \label{fig:edison_ratio}
+\end{figure}
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/edison_speedup.png}
+  \caption{Speedup comparison on Edison for IDR(s) and SuperLU solvers using 2nd order discretization scheme.}
+  \label{fig:edison_speedup}
+\end{figure}
+
+The second simulation, conducted with the 2nd order discretization, is weak scaling. For this type of scaling, the problem size increases linearly with the number of processors. This test was conducted to find the efficiency and limits of the solvers using fully packed nodes on Edison. From Figure~\ref{fig:edison_weak_2nd}, we observe that both the IDR(s) and SuperLU solvers are efficient at weak scaling. SuperLU had a $0.48$ slope and IDR(s) had a $-0.04$ slope. Furthermore, during our tests, SuperLU could not solve larger problems (with more than 3M unknowns) on packed nodes as it runs out of memory. This means that the SuperLU solver is limited to second order mid-sized (approximately 3M unknowns) problems when using 2.67GB of memory per node.
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/edison_weak_2nd.png}
+  \caption{Weak-scaling comparison on Edison for SuperLU and IDR(s) solvers using 2nd order discretization scheme.}
+  \label{fig:edison_weak_2nd}
+\end{figure}
+
+\subsection{Fourth-order weak-scaling results}
+Results from Section~\ref{sec:second-order} led to further tests in order to find the fill-in memory limits of SuperLU when solving a 4th order discretization problem. Weak scaling was again used to find the limits of SuperLU for the 4th order FD scheme. Figure~\ref{fig:edison_weak_4nd} shows that the SuperLU solver could only solve small-sized problems with less than 100 cells in each direction (1M unknowns). We also observe that both the IDR(s) and SuperLU solvers are efficient at weak scaling. SuperLU had a $0.52$ slope and IDR(s) had a $-0.01$ slope. Therefore, for fourth order discretization, SuperLU solver is limited to small-sized (less than 1M unknowns) problems when using 2.67GB of memory per node on Edison.
+\begin{figure}
+	\centering
+ \includegraphics[width=0.85\textwidth]{graphs/edison_weak_4th.png}
+  \caption{Weak-scaling comparison on Edison for SuperLU and IDR(s) solvers using 4th order discretization scheme.}
+  \label{fig:edison_weak_4nd}
+\end{figure}
+
+\section{Unpacked nodes results for second-order scheme}
+The last comparison was done on Edison to solve large matrices that could not be solved on packed nodes due to out of memory (OOM) errors. On the packed nodes results, all processors were used for both computation and memory storage leaving 2.67 Gigabytes (GB) per core for the SuperLU solver. On the other hand, the unpacked nodes test only uses two cores for computation and the rest are left for memory storage. This leaves 32 GB of memory per core. Figure~\ref{fig:Unpacked_edison_2nd_ratio} shows the performance of SuperLU compared to the IDR(s) solver. Since the IDR(s) solver does not run out of memory, it will use all the cores for computation. This makes the IDR(s) solver much faster as the problem size gets bigger. For example, from Figure~\ref{fig:Unpacked_edison_2nd_ratio}, we can see that it takes 120 sources (RHS sides) for SuperLU to break even with IDR(s) when solving a problem with 6 Million unknowns.
+\begin{figure}
+	\centering
+ \includegraphics[width=0.75\textwidth]{graphs/Unpacked_edison_2nd_ratio.png}
+  \caption{Comparison of the speed ratio when unpacked nodes are used for large problems. The numbers between parenthesis are the computational processors used for SuperLU. The rest of the processors are not used to conserve memory. }
+  \label{fig:Unpacked_edison_2nd_ratio}
+\end{figure}
+
+\section{Conclusion}
+The results show that for the second order scheme, small-sized to mid-sized matrices ($100 \times 100 \times 100$ domain with 1 million unknowns to $200 \times 200 \times 100$ domain with 4 million unknowns) should be solved using SuperLU instead of IDR(s). Our usual seismic exploration problem will approximately have 100 sources. Since SuperLU is just ten times slower than IDR(s), it will be faster to factorize matrix $A$ and solve for the multiple $RHS$ using SuperLU. Generally, for this problem size, the forward and backward substitutions take less than 1 second. Thus, making the IDR(s) method inferior. However, for large-size problems ($200 \times 200 \times 200$ domain with 6 million unknowns and more), the current implementation of parallel SuperLU is more than 100 times slower than IDR(s). Thus, making IDR(s) method superior. Part of the future work will include tweaking the parallel SuperLU algorithm to make it better than IDR(s) for even large-sized problems.
+
+\paragraph{Future work} The future goals of this project will be to cheaply run SuperLU by using less CPU hours and less
+memory. The first task, as discussed with \emph{Prof. Demmel}, is to use nested dissection ordering. Nested dissection is a method of finding elimination ordering. The algorithm uses a \emph{divide and conquer strategy} on the graph. Removal of a set of vertices results in two new graphs which Gaussian elimination may be performed separately. The results for the two parts may then be combined to find the solution of the entire graph. This method will be tested for our matrices as it has been shown to result in good elimination orderings of certain cases similar to ours \citep{khaira1992nested}. The second task will be to perform these simulations again in Cori as it has 32 cores and 128GB of memory per node. This configuration will hugely decrease CPU hours drain compared to Edison's 24 cores and 64GB of memory per node.
+
+
+% \subsection{Optimizations}
+% %A description of the design choices/optimizations that you tried and how did they affect the performance.
+%
+% \subsection{Parallelization}
+% %Discussion on the speed gained by going parallel.
+%
+% \subsection{Scalability}
+% %Discussion of the scalability and relative costs of the parallel algorithms with changing matrix size (weak and strong scaling).
+%
+% \subsection{Future Implementation}
+% %A discussion on how would you implement the same parallel algorithms in a final reproduction of the program. Cori testing on unpacked
+%
+% \section{Conclusion}
+\pagebreak
+\bibliography{references}
+%Appendix
+%\pagebreak
+%\begin{appendices}
+%
+%\end{appendices}
+
+\end{document}
